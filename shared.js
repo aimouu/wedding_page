@@ -45,10 +45,17 @@ async function apiCall(action, payload) {
   if (typeof DEV_MODE !== "undefined" && DEV_MODE) {
     return devMock(action, payload);
   }
-  const res = await fetch(WEBHOOK_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action, token: SECRET_TOKEN, ...payload }),
+  const params = new URLSearchParams({
+    action,
+    token: SECRET_TOKEN,
+    ...Object.fromEntries(
+      Object.entries(payload).map(([k, v]) =>
+        [k, typeof v === "object" ? JSON.stringify(v) : v]
+      )
+    ),
+  });
+  const res = await fetch(`${WEBHOOK_URL}?${params.toString()}`, {
+    method: "GET",
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();

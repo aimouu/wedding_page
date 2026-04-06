@@ -36,48 +36,33 @@ const SHEET_SONGS    = "Songs";
 
 // ─────────────────────────────────────────────────────────────────
 
-function doPost(e) {
-  // Always return CORS headers
-  const headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Content-Type": "application/json",
-  };
-
+function doGet(e) {
   try {
-    // Parse body
-    const body = JSON.parse(e.postData.contents);
-    const action = body.action; // "verify" | "rsvp" | "song"
+    const p      = e.parameter;
+    const action = p.action;
 
-    // Validate token
-    if (body.token !== SECRET_TOKEN) {
-      return respond({ ok: false, error: "Unauthorized" }, headers);
+    if (p.token !== SECRET_TOKEN) {
+      return respond({ ok: false, error: "Unauthorized" });
     }
 
-    if (action === "verify") {
-      return respond(handleVerify(body), headers);
+    // plusOne arrives as a JSON string — parse it back to object
+    const body = Object.assign({}, p);
+    if (body.plusOne && typeof body.plusOne === "string") {
+      try { body.plusOne = JSON.parse(body.plusOne); } catch (_) {}
     }
 
-    if (action === "rsvp") {
-      return respond(handleRsvp(body), headers);
-    }
+    if (action === "verify") return respond(handleVerify(body));
+    if (action === "rsvp")   return respond(handleRsvp(body));
+    if (action === "song")   return respond(handleSong(body));
 
-    if (action === "song") {
-      return respond(handleSong(body), headers);
-    }
-
-    return respond({ ok: false, error: "Unknown action" }, headers);
-
+    return respond({ ok: false, error: "Unknown action" });
   } catch (err) {
-    return respond({ ok: false, error: "Server error" }, headers);
+    return respond({ ok: false, error: "Server error: " + err.message });
   }
 }
 
-// ── CORS preflight ────────────────────────────────────────────────
-function doGet(e) {
-  return respond({ ok: true, message: "Wedding API is running" }, {
-    "Access-Control-Allow-Origin": "*",
-    "Content-Type": "application/json",
-  });
+function doPost(_e) {
+  return respond({ ok: false, error: "Use GET requests" });
 }
 
 // ── Verify guest name ─────────────────────────────────────────────
