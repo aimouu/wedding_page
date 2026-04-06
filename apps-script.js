@@ -77,6 +77,9 @@ function handleVerify(body) {
   const sheet = getSheet(SHEET_GUESTS);
   const data  = sheet.getDataRange().getValues();
 
+  // DEBUG — remove after fixing
+  return { ok: true, found: false, debug: { firstName, lastName, totalRows: data.length, row1: data[0], row2: data[1] } };
+
   // Row 0 = headers, skip it
   for (let i = 1; i < data.length; i++) {
     const rowFirst = String(data[i][0]).trim().toLowerCase();
