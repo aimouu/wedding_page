@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Let's Boogie 🪩</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="shared.css" />
+<style>
+  /* ── Main-page-only styles ──────────────────────────────────── */
+
+  /* Scroll padding so navbar doesn't cover section headings */
+  html { scroll-padding-top: 70px; }
+
+  /* ── Sections ─────────────────────────────────────────────── */
+  .scroll-body {
+    position: relative;
+    z-index: 1;
+    padding-bottom: 80px;
+  }
+
+  /* ── Hero ─────────────────────────────────────────────────── */
+  #hero {
+    min-height: 92vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 24px 40px; /* top padding clears navbar */
+  }
+  #hero .inner { text-align: center; max-width: 560px; margin: 0 auto; }
+
+  /* ── RSVP ─────────────────────────────────────────────────── */
+  .rsvp-name-row {
+    display: flex; gap: 12px; margin-bottom: 22px;
+  }
+  .rsvp-name-row .field { flex: 1; margin-bottom: 0; }
+
+  /* ── Song inputs ──────────────────────────────────────────── */
+  .song-inputs { display: flex; flex-direction: column; gap: 12px; }
+
+  /* ── Dev badge ────────────────────────────────────────────── */
+  .dev-badge {
+    position: fixed; bottom: 16px; right: 16px;
+    background: var(--gold); color: #000;
+    font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.08em; padding: 4px 10px;
+    border-radius: 20px; z-index: 999;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<div class="sparkles" id="sparkles"></div>
+
+<!-- ── Navbar ────────────────────────────────────────────────── -->
+<nav class="navbar" id="navbar">
+  <a class="nav-link" href="#hero">🪩 Home</a>
+  <a class="nav-link" href="#faq">FAQ</a>
+  <a class="nav-link" href="#rsvp">RSVP</a>
+  <a class="nav-link" href="#song">Song</a>
+</nav>
+
+<div id="root"></div>
+
+<script src="config.js"></script>
+<script src="shared.js"></script>
+<script>
+"use strict";
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let S = {
+  // Verified guest — null until they pass verification
+  guest: null,  // { firstName, lastName, plusOne, alreadyRsvpd }
+
+  faqOpen: null,
+
+  // Verify step
+  verifyFirst:   "",
+  verifyLast:    "",
+  verifyLoading: false,
+  verifyError:   "",
+
+  // RSVP
+  rsvp: {
+    attending:        null,
+    food:             null,
+    allergies:        "",
+    notes:            "",
+    plusOneFirst:     "",
+    plusOneLast:      "",
+    plusOneAttending: null,
+    plusOneFood:      null,
+    plusOneAllergies: "",
+  },
+  rsvpLoading:   false,
+  rsvpError:     "",
+  rsvpSubmitted: false,
+
+  // Song
+  songTitle:     "",
+  songArtist:    "",
+  songLoading:   false,
+  songSubmitted: false,
+};
+
+function set(patch)     { S = { ...S, ...patch }; render(); }
+function setRsvp(patch) { S = { ...S, rsvp: { ...S.rsvp, ...patch } }; render(); }
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER — full page rebuild on state change
+// ═══════════════════════════════════════════════════════════════
+function render() {
+  qi("root").innerHTML = `
+    <div class="scroll-body">
+      ${renderHero()}
+      ${renderDivider()}
+      ${renderFaq()}
+      ${renderDivider()}
+      ${renderRsvp()}
+      ${renderDivider()}
+      ${renderSong()}
+      <div class="footer">Made with 💛 and a lot of glitter</div>
+    </div>`;
+  bind();
+  updateNavHighlight();
+}
+
+function renderDivider() {
+  return `<div class="divider"><div class="divider-ball"></div></div>`;
+}
+
+// ── 1. Hero ────────────────────────────────────────────────────
+function renderHero() {
+  return `
+  <section id="hero">
+    <div class="inner">
+      <div class="disco-wrap" style="margin-bottom:36px">
+        <div class="disco-string"></div>
+        <div class="disco-ball"></div>
+      </div>
+      <p class="eyebrow">You're invited!</p>
+      <h1 class="welcome-name">Let's Boogie</h1>
+      <p class="subtitle">
+        You're officially on the guest list.<br>
+        Get ready for the night of your life. 🪩
+      </p>
+      <div class="emoji-row">🕺 💃 🪩 ✨ 🎶</div>
+    </div>
+  </section>`;
+}
+
+// ── 2. FAQ ─────────────────────────────────────────────────────
+function renderFaq() {
+  return `
+  <section id="faq" class="section" style="padding-top:8px">
+    <h2 class="section-title">FAQ</h2>
+    <p class="subtitle">Everything you need to know ✨</p>
+    <div>
+      ${FAQ.map((item, i) => `
+        <div class="faq-item">
+          <button class="faq-trigger" data-faq="${i}">
+            <span>${esc(item.q)}</span>
+            <span class="faq-chevron ${S.faqOpen === i ? "open" : ""}">⌄</span>
+          </button>
+          <div class="faq-body ${S.faqOpen === i ? "open" : ""}">
+            ${esc(item.a)}
+          </div>
+        </div>`).join("")}
+    </div>
+  </section>`;
+}
+
+// ── 3. RSVP ────────────────────────────────────────────────────
+function renderRsvp() {
+  return `
+  <section id="rsvp" class="section" style="padding-top:8px">
+    <h2 class="section-title">RSVP</h2>
+    <p class="subtitle">Let us know if you're coming!</p>
+    ${S.rsvpSubmitted ? renderRsvpSuccess() : S.guest ? renderRsvpForm() : renderVerifyForm()}
+  </section>`;
+}
+
+function renderVerifyForm() {
+  return `
+  <div class="field">
+    <label class="label">First name</label>
+    <input type="text" id="verifyFirst" maxlength="80"
+      placeholder="First name" value="${esc(S.verifyFirst)}" />
+  </div>
+  <div class="field">
+    <label class="label">Last name</label>
+    <input type="text" id="verifyLast" maxlength="80"
+      placeholder="Last name" value="${esc(S.verifyLast)}" />
+  </div>
+  ${S.verifyError ? `<div class="error-msg">${esc(S.verifyError)}</div>` : ""}
+  <button class="btn-primary" id="verifyBtn" ${S.verifyLoading ? "disabled" : ""}>
+    ${S.verifyLoading ? `<span class="spinner"></span>Checking...` : `Find my invite 🎟️`}
+  </button>`;
+}
+
+function renderRsvpForm() {
+  const r = S.rsvp;
+  const g = S.guest;
+  return `
+  <!-- Verified name (read-only) -->
+  <div class="rsvp-name-row" style="margin-bottom:22px">
+    <div class="field">
+      <label class="label">First name</label>
+      <input type="text" value="${esc(g.firstName)}" readonly />
+    </div>
+    <div class="field">
+      <label class="label">Last name</label>
+      <input type="text" value="${esc(g.lastName)}" readonly />
+    </div>
+  </div>
+
+  <!-- Attending -->
+  <div class="field">
+    <label class="label">Are you coming?</label>
+    <div class="choice-row">
+      <button class="btn-choice ${r.attending === true  ? "active" : ""}"
+        data-attend="true">Yes, let's boogie! 🕺</button>
+      <button class="btn-choice ${r.attending === false ? "active" : ""}"
+        data-attend="false">Sadly, no</button>
+    </div>
+  </div>
+
+  ${r.attending === true ? `
+    <!-- Food -->
+    <div class="field">
+      <label class="label">Food preference</label>
+      <div class="choice-row">
+        ${["Meat","Vegetarian","Vegan"].map(f => `
+          <button class="btn-choice ${r.food === f ? "active" : ""}"
+            data-food="${f}">${f}</button>`).join("")}
+      </div>
+    </div>
+
+    <!-- Allergies -->
+    <div class="field">
+      <label class="label">Allergies or dietary needs</label>
+      <input type="text" id="rsvpAllergies" maxlength="200"
+        placeholder="Gluten-free, nut allergy, etc."
+        value="${esc(r.allergies)}" />
+    </div>
+
+    <!-- Notes -->
+    <div class="field">
+      <label class="label">Anything else we should know?</label>
+      <textarea id="rsvpNotes" maxlength="400"
+        placeholder="Parking? Secret talents?">${esc(r.notes)}</textarea>
+    </div>
+
+    ${g.plusOne ? renderPlusOne(r) : ""}
+  ` : ""}
+
+  ${S.rsvpError ? `<div class="error-msg">${esc(S.rsvpError)}</div>` : ""}
+
+  <div class="submit-area">
+    <button class="btn-primary" id="rsvpBtn" ${S.rsvpLoading ? "disabled" : ""}>
+      ${S.rsvpLoading
+        ? `<span class="spinner"></span>Sending...`
+        : `Send RSVP`}
+    </button>
+  </div>`;
+}
+
+function renderPlusOne(r) {
+  return `
+  <div class="card card-gold" style="margin:4px 0 20px">
+    <p class="plus-one-label">Plus One</p>
+
+    <div class="rsvp-name-row" style="margin-bottom:16px">
+      <div class="field">
+        <label class="label">First name</label>
+        <input type="text" id="plusOneFirst" maxlength="80"
+          placeholder="First name" value="${esc(r.plusOneFirst)}" />
+      </div>
+      <div class="field">
+        <label class="label">Last name</label>
+        <input type="text" id="plusOneLast" maxlength="80"
+          placeholder="Last name" value="${esc(r.plusOneLast)}" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="label">Are they coming?</label>
+      <div class="choice-row">
+        <button class="btn-choice ${r.plusOneAttending === true  ? "active" : ""}"
+          data-plus-attend="true">Yes, let's boogie! 🕺</button>
+        <button class="btn-choice ${r.plusOneAttending === false ? "active" : ""}"
+          data-plus-attend="false">Sadly, no</button>
+      </div>
+    </div>
+
+    ${r.plusOneAttending === true ? `
+      <div class="field">
+        <label class="label">Food preference</label>
+        <div class="choice-row">
+          ${["Meat","Vegetarian","Vegan"].map(f => `
+            <button class="btn-choice ${r.plusOneFood === f ? "active" : ""}"
+              data-plus-food="${f}">${f}</button>`).join("")}
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label class="label">Allergies or dietary needs</label>
+        <input type="text" id="plusOneAllergies" maxlength="200"
+          placeholder="Gluten-free, nut allergy, etc."
+          value="${esc(r.plusOneAllergies)}" />
+      </div>` : ""}
+  </div>`;
+}
+
+function renderRsvpSuccess() {
+  const attending = S.rsvp.attending;
+  return `
+  <div class="success-banner">
+    <div style="font-size:2.5rem;margin-bottom:12px">
+      ${attending === false ? "💌" : "🎉"}
+    </div>
+    <p style="font-size:1.1rem;font-weight:500;margin-bottom:8px">
+      ${attending === false ? "We'll miss you!" : "See you on the dance floor!"}
+    </p>
+    <p style="color:var(--muted)">
+      ${attending === false
+        ? "Your response has been recorded. Thank you for letting us know."
+        : "Your RSVP is confirmed. Prepare your best disco moves."}
+    </p>
+  </div>`;
+}
+
+// ── 4. Song request ─────────────────────────────────────────────
+function renderSong() {
+  return `
+  <section id="song" class="section" style="padding-top:8px">
+    <h2 class="section-title">Request a Song</h2>
+    <p class="subtitle">Tell the DJ what makes you move 🎵</p>
+
+    ${S.songSubmitted ? `
+      <div class="success-banner">
+        <div style="font-size:2rem;margin-bottom:8px">🎵</div>
+        <p style="font-weight:500">Added to the playlist!</p>
+        <p style="color:var(--muted);font-size:0.9rem;margin-top:4px">
+          The DJ has been notified. Feel free to request another! 🎧
+        </p>
+      </div>` : `
+      <div class="song-inputs">
+        <input type="text" id="songTitle" maxlength="150"
+          placeholder="Song name"
+          value="${esc(S.songTitle)}" />
+        <input type="text" id="songArtist" maxlength="100"
+          placeholder="Artist (optional)"
+          value="${esc(S.songArtist)}" />
+        <button class="btn-primary" id="songBtn" ${S.songLoading ? "disabled" : ""}>
+          ${S.songLoading
+            ? `<span class="spinner"></span>Dropping...`
+            : `Drop the beat 🎧`}
+        </button>
+      </div>`}
+  </section>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EVENT BINDING
+// ═══════════════════════════════════════════════════════════════
+function bind() {
+  // FAQ
+  qAll("[data-faq]").forEach(btn =>
+    btn.addEventListener("click", () => {
+      const i = parseInt(btn.dataset.faq);
+      set({ faqOpen: S.faqOpen === i ? null : i });
+    })
+  );
+
+  // Verify
+  qi("verifyFirst")?.addEventListener("input", e => { S.verifyFirst = e.target.value; });
+  qi("verifyLast") ?.addEventListener("input", e => { S.verifyLast  = e.target.value; });
+  qi("verifyBtn")  ?.addEventListener("click", handleVerify);
+  qi("verifyFirst")?.addEventListener("keydown", e => { if (e.key === "Enter") handleVerify(); });
+  qi("verifyLast") ?.addEventListener("keydown", e => { if (e.key === "Enter") handleVerify(); });
+
+  // RSVP attending
+  qAll("[data-attend]").forEach(btn =>
+    btn.addEventListener("click", () =>
+      setRsvp({ attending: btn.dataset.attend === "true" })
+    )
+  );
+  // RSVP food
+  qAll("[data-food]").forEach(btn =>
+    btn.addEventListener("click", () => setRsvp({ food: btn.dataset.food }))
+  );
+  // RSVP text
+  qi("rsvpAllergies")?.addEventListener("input", e => setRsvp({ allergies: e.target.value }));
+  qi("rsvpNotes")    ?.addEventListener("input", e => setRsvp({ notes:     e.target.value }));
+
+  // Plus one
+  qi("plusOneFirst")?.addEventListener("input", e => setRsvp({ plusOneFirst: e.target.value }));
+  qi("plusOneLast") ?.addEventListener("input", e => setRsvp({ plusOneLast:  e.target.value }));
+  qAll("[data-plus-attend]").forEach(btn =>
+    btn.addEventListener("click", () =>
+      setRsvp({ plusOneAttending: btn.dataset.plusAttend === "true" })
+    )
+  );
+  qAll("[data-plus-food]").forEach(btn =>
+    btn.addEventListener("click", () => setRsvp({ plusOneFood: btn.dataset.plusFood }))
+  );
+  qi("plusOneAllergies")?.addEventListener("input", e =>
+    setRsvp({ plusOneAllergies: e.target.value })
+  );
+
+  // RSVP submit
+  qi("rsvpBtn")?.addEventListener("click", handleRsvp);
+
+  // Song
+  qi("songTitle") ?.addEventListener("input", e => { S.songTitle  = e.target.value; });
+  qi("songArtist")?.addEventListener("input", e => { S.songArtist = e.target.value; });
+  qi("songBtn")   ?.addEventListener("click", handleSong);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HANDLERS
+// ═══════════════════════════════════════════════════════════════
+async function handleVerify() {
+  const firstName = sanitize(S.verifyFirst.trim());
+  const lastName  = sanitize(S.verifyLast.trim());
+
+  if (!firstName || !lastName) {
+    set({ verifyError: "Please enter your first and last name." }); return;
+  }
+  if (!isValidName(firstName) || !isValidName(lastName)) {
+    set({ verifyError: "Names may only contain letters, spaces, hyphens, and apostrophes." }); return;
+  }
+
+  set({ verifyLoading: true, verifyError: "" });
+
+  try {
+    const data = await apiCall("verify", { firstName, lastName });
+
+    if (!data.found) {
+      set({ verifyLoading: false, verifyError: "Name not found on the guest list. Check the spelling or contact us." });
+      return;
+    }
+
+    set({
+      verifyLoading: false,
+      verifyError:   "",
+      guest:         { firstName, lastName, plusOne: data.plusOne, alreadyRsvpd: data.alreadyRsvpd },
+      rsvpSubmitted: data.alreadyRsvpd,
+    });
+
+  } catch {
+    set({ verifyLoading: false, verifyError: "Could not connect. Please try again." });
+  }
+}
+
+async function handleRsvp() {
+  const r         = S.rsvp;
+  const firstName = S.guest.firstName;
+  const lastName  = S.guest.lastName;
+
+  if (r.attending === null) {
+    set({ rsvpError: "Please select whether you're attending." }); return;
+  }
+  if (r.attending && !r.food) {
+    set({ rsvpError: "Please select your food preference." }); return;
+  }
+  if (r.attending && r.plusOneAttending === true) {
+    if (!r.plusOneFirst.trim() || !r.plusOneLast.trim()) {
+      set({ rsvpError: "Please enter your plus one's full name." }); return;
+    }
+    if (!r.plusOneFood) {
+      set({ rsvpError: "Please select your plus one's food preference." }); return;
+    }
+  }
+  if (!rateLimit(`rsvp_${firstName}_${lastName}`, 3, 120_000)) {
+    set({ rsvpError: "Too many submissions. Please wait a moment." }); return;
+  }
+
+  set({ rsvpLoading: true, rsvpError: "" });
+
+  try {
+    const data = await apiCall("rsvp", {
+      firstName: sanitize(firstName),
+      lastName:  sanitize(lastName),
+      attending:  r.attending,
+      food:       sanitize(r.food || ""),
+      allergies:  sanitize(r.allergies),
+      notes:      sanitize(r.notes),
+      plusOne: r.plusOneAttending !== null ? {
+        firstName:  sanitize(r.plusOneFirst),
+        lastName:   sanitize(r.plusOneLast),
+        attending:  r.plusOneAttending,
+        food:       sanitize(r.plusOneFood || ""),
+        allergies:  sanitize(r.plusOneAllergies),
+      } : null,
+    });
+
+    if (!data.ok && !data.alreadyRsvpd) {
+      set({ rsvpLoading: false, rsvpError: data.error || "Something went wrong." });
+      return;
+    }
+    set({ rsvpLoading: false, rsvpSubmitted: true, rsvpError: "" });
+
+  } catch {
+    set({ rsvpLoading: false, rsvpError: "Could not connect. Please try again." });
+  }
+}
+
+async function handleSong() {
+  const title = sanitize(S.songTitle);
+  if (!title) {
+    const btn = qi("songBtn");
+    if (btn) {
+      btn.textContent = "Enter a song name first!";
+      setTimeout(() => { btn.textContent = "Drop the beat 🎧"; }, 2000);
+    }
+    return;
+  }
+  if (!rateLimit(`song`, 10, 60_000)) return;
+
+  set({ songLoading: true });
+
+  try {
+    const data = await apiCall("song", {
+      firstName: sanitize(S.guest?.firstName || ""),
+      lastName:  sanitize(S.guest?.lastName  || ""),
+      song:      title,
+      artist:    sanitize(S.songArtist),
+    });
+
+    if (data.ok) {
+      S.songTitle  = "";
+      S.songArtist = "";
+      set({ songLoading: false, songSubmitted: true });
+      // Reset after 3s so they can request another
+      setTimeout(() => set({ songSubmitted: false }), 3000);
+    } else {
+      set({ songLoading: false });
+    }
+  } catch {
+    set({ songLoading: false });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NAVBAR ACTIVE HIGHLIGHT ON SCROLL
+// ═══════════════════════════════════════════════════════════════
+function updateNavHighlight() {
+  const sections = ["hero","faq","rsvp","song"];
+  const links = qAll(".nav-link");
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        links.forEach(l => {
+          l.classList.toggle(
+            "active",
+            l.getAttribute("href") === `#${entry.target.id}`
+          );
+        });
+      }
+    });
+  }, { threshold: 0.4 });
+
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+initSparkles();
+render();
+
+if (typeof DEV_MODE !== "undefined" && DEV_MODE) {
+  const badge = document.createElement("div");
+  badge.className = "dev-badge";
+  badge.textContent = "DEV MODE";
+  document.body.appendChild(badge);
+}
+</script>
+</body>
+</html>
