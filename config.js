@@ -12,7 +12,7 @@
 const DEV_MODE     = false;                          // ← set to false before deploying to GitHub
 
 // ── Apps Script config ────────────────────────────────────────────
-const WEBHOOK_URL  = "https://script.google.com/macros/s/AKfycbwZHYHNpGHJqwg8wpVgBzyP1IsnyplKisIglm5YAOfpfJTT-gmhBMgP8YMey5Bwuz9b/exec"; // ← your URL
+const WEBHOOK_URL  = "https://script.google.com/macros/s/AKfycbxpSGrd1tcrfaJTutDzZl8vDxAAnVDtJ2DJnPLWC--gP5nhG2wbOmwfZCR2pUpElD8U/exec"; // ← your URL
 const SECRET_TOKEN = "disco-20261010-AE";            // ← must match apps-script.js
 
 // ── FAQ content ───────────────────────────────────────────────────
