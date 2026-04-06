@@ -400,6 +400,9 @@ function renderRsvpSuccess() {
           ? "Your RSVP has been updated successfully."
           : "Your RSVP is confirmed. Prepare your best disco moves."}
     </p>
+    <button class="btn-secondary" id="editRsvpBtn" style="margin-top:16px">
+      ✏️ Update my RSVP
+    </button>
   </div>`;
 }
 
@@ -486,8 +489,11 @@ function bind() {
     setRsvp({ plusOneAllergies: e.target.value })
   );
 
-  // RSVP submit
-  qi("rsvpBtn")?.addEventListener("click", handleRsvp);
+  // RSVP submit / edit
+  qi("rsvpBtn")   ?.addEventListener("click", handleRsvp);
+  qi("editRsvpBtn")?.addEventListener("click", () =>
+    set({ rsvpSubmitted: false, rsvpUpdated: false })
+  );
 
   // Song
   qi("songTitle") ?.addEventListener("input", e => { S.songTitle  = e.target.value; });
