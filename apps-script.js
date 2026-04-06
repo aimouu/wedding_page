@@ -156,18 +156,23 @@ function handleRsvp(body) {
     ]);
   }
 
-  const plusOne = body.plusOne || {};
+  const plusOne    = body.plusOne || {};
+  const attending  = body.attending === true || body.attending === "true";
+  const p1attend   = plusOne.attending === true  ? "Yes"
+                   : plusOne.attending === "true" ? "Yes"
+                   : plusOne.attending === false  ? "No"
+                   : plusOne.attending === "false"? "No" : "";
   const newRow  = [
     new Date(),
     toTitleCase(firstName),
     toTitleCase(lastName),
-    body.attending     ? "Yes" : "No",
+    attending ? "Yes" : "No",
     sanitize(body.food        || ""),
     sanitize(body.allergies   || ""),
     sanitize(body.notes       || ""),
     toTitleCase(sanitize(plusOne.firstName   || "")),
     toTitleCase(sanitize(plusOne.lastName    || "")),
-    plusOne.attending  !== undefined ? (plusOne.attending ? "Yes" : "No") : "",
+    p1attend,
     sanitize(plusOne.food        || ""),
     sanitize(plusOne.allergies   || ""),
   ];

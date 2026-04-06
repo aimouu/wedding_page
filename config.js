@@ -12,7 +12,7 @@
 const DEV_MODE     = false;                          // ← set to false before deploying to GitHub
 
 // ── Apps Script config ────────────────────────────────────────────
-const WEBHOOK_URL  = "https://script.google.com/macros/s/AKfycbwr-ggqGq36jrU4idr-MrNNfsgjUZ1GYLJU6MmtyqcsZM0Nx42rse7ldDPZO0wXm1wk/exec"; // ← your URL
+const WEBHOOK_URL  = "https://script.google.com/macros/s/AKfycbyxYg7906zvm6CRctmZwB_IThU4B-Xltwlup01MWfefQZSQ7dRgI6fXSHTNSUcPK41Q/exec"; // ← your URL
 const SECRET_TOKEN = "disco-20261010-AE";            // ← must match apps-script.js
 
 // ── FAQ content ───────────────────────────────────────────────────
@@ -33,11 +33,11 @@ const FAQ = [
     q: "What's the dress code?",
     a: "Disco glam! Sequins, glitter, and colour encouraged. Think Studio 54.",
   },
-    {
+  {
     q: "Want to make a speech?",
     a: "xxxxxxxxxxxxxxxx",
   },
-    {
+  {
     q: "About gifts?",
     a: "xxxxxxx",
   },

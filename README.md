@@ -24,9 +24,23 @@ wedding/
 ```
 main.html           Apps Script (Google)       Google Sheets
   enter name  ──►  verify first+last name  ──► Guests tab (private)
-  RSVP form   ──►  submit RSVP             ──► RSVPs tab
+  RSVP form   ──►  submit RSVP             ──► RSVPs tab (overwrite if exists)
               ──►  submit song request      ──► Songs tab
 ```
+
+---
+
+## Features
+
+- **Guest verification** — guests enter their name, checked against the private Guests sheet
+- **RSVP form** — attending, food preference, allergies, notes, plus one support
+- **Update RSVP** — guests can re-submit at any time; their existing row is overwritten, not duplicated
+- **Song requests** — guests can request songs for the DJ
+- **FAQ** — fully configurable in `config.js`, supports any number of questions
+- **Progress bar** — animated progress indicator shown during all network requests
+- **Warm-up ping** — page silently pings Apps Script on load to reduce cold-start delay
+- **Title case names** — names are normalised to Title Case when saved (e.g. "ANNA" → "Anna")
+- **Case-insensitive matching** — "anna", "ANNA", and "Anna" all match the guest list
 
 ---
 
@@ -78,6 +92,7 @@ main.html           Apps Script (Google)       Google Sheets
 
 > ⚠️ Every time you edit `apps-script.js`, create a **New deployment**.
 > Using "Manage deployments → Edit" does NOT update the live version.
+> After each new deployment, update `WEBHOOK_URL` in `config.js` with the new URL.
 
 **About response speed:** Apps Script can take 2–5 seconds on the first request after being idle. The page automatically sends a silent warm-up ping when it loads, so by the time a guest clicks "Find my invite" the script is already awake.
 
@@ -93,7 +108,15 @@ const WEBHOOK_URL  = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
 const SECRET_TOKEN = "REPLACE_WITH_YOUR_SECRET_TOKEN";
 ```
 
-Also update the `FAQ` array in `config.js` with your actual party details (date, venue, dress code, etc.).
+Update the `FAQ` array with your actual party details. You can add as many questions as you like:
+
+```js
+const FAQ = [
+  { q: "Where is the party?", a: "Your venue here." },
+  { q: "What's the dress code?", a: "Your dress code here." },
+  // add more...
+];
+```
 
 ---
 
@@ -136,7 +159,7 @@ python3 -m http.server 8080
 ## Viewing responses
 
 Open your Google Sheet:
-- **`RSVPs` tab** — one row per guest, with timestamp and all form fields
+- **`RSVPs` tab** — one row per guest, with timestamp and all form fields. Re-submissions overwrite the existing row.
 - **`Songs` tab** — one row per song request, with guest name and timestamp
 
 ---
@@ -149,10 +172,12 @@ Edit the `Guests` tab in Google Sheets directly. Changes take effect immediately
 
 ## Updating an RSVP
 
-Guests can re-submit their RSVP at any time. When a verified guest has already submitted:
-- The form is pre-filled with their previous answers
-- A notice is shown: *"You've already submitted an RSVP. You can update it below and resubmit."*
+Guests can re-submit their RSVP at any time:
+- After verifying, the form is **pre-filled** with their previous answers
+- A highlighted notice reminds them they already submitted
 - On resubmit, the existing row in the `RSVPs` tab is **overwritten** (not duplicated) and the timestamp is updated
+- The success message shows **"RSVP updated!"** to confirm the change
+- Guests can also click **"Update my RSVP"** from the success screen to go back and edit
 
 ---
 
@@ -179,6 +204,8 @@ Guests can re-submit their RSVP at any time. When a verified guest has already s
 | "Unauthorized" error | `SECRET_TOKEN` in `apps-script.js` must exactly match `config.js` |
 | Name not found (correct spelling) | Check for trailing spaces in the Guests sheet cells; confirm names are in the `Guests` tab, not `Songs` or `RSVPs` |
 | RSVP not appearing in sheet | Confirm tab is named exactly `RSVPs` (capital R, V, P, lowercase s) |
+| RSVP not updating on resubmit | Make sure you redeployed Apps Script after the latest changes and updated `WEBHOOK_URL` |
 | Changes to `apps-script.js` not working | Must create a **New deployment**, not edit existing — then update `WEBHOOK_URL` in `config.js` |
+| FAQ not showing new questions | Upload the updated `config.js` to GitHub |
 | Slow first response | Expected — Apps Script has a cold-start delay. The page auto-pings on load to minimise this. |
 | DEV_MODE badge still showing | Set `DEV_MODE = false` in `config.js` |
