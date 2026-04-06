@@ -33,6 +33,7 @@ const SPREADSHEET_ID = ""; // Leave empty = uses the bound spreadsheet
 const SHEET_GUESTS   = "Guests";
 const SHEET_RSVPS    = "RSVPs";
 const SHEET_SONGS    = "Songs";
+const RSVP_DEADLINE  = new Date("2026-08-10T23:59:59");
 
 // ─────────────────────────────────────────────────────────────────
 
@@ -131,6 +132,10 @@ function getExistingRsvp(firstName, lastName) {
 
 // ── Submit RSVP ───────────────────────────────────────────────────
 function handleRsvp(body) {
+  if (new Date() > RSVP_DEADLINE) {
+    return { ok: false, error: "rsvp_closed" };
+  }
+
   const firstName = sanitize(body.firstName || "");
   const lastName  = sanitize(body.lastName  || "");
 

@@ -244,12 +244,15 @@ function renderRsvp() {
   <section id="rsvp" class="section" style="padding-top:8px">
     <h2 class="section-title">RSVP</h2>
     <p class="subtitle">Let us know if you're coming!</p>
-    ${S.rsvpSubmitted ? renderRsvpSuccess() : S.guest ? renderRsvpForm() : renderVerifyForm()}
+    ${new Date() > new Date("2026-08-10T23:59:59") ? renderRsvpClosed() : S.rsvpSubmitted ? renderRsvpSuccess() : S.guest ? renderRsvpForm() : renderVerifyForm()}
   </section>`;
 }
 
 function renderVerifyForm() {
   return `
+  <p style="font-size:0.85rem;color:var(--muted);margin-bottom:18px;text-align:center">
+    RSVP deadline: <strong style="color:#e0c9ff">10 August 2026</strong>
+  </p>
   <div class="field">
     <label class="label">First name</label>
     <input type="text" id="verifyFirst" maxlength="80"
@@ -277,7 +280,7 @@ function renderRsvpForm() {
   ${g.alreadyRsvpd ? `
   <div class="info-banner" style="margin-bottom:20px">
     <span style="font-size:1.3rem">✏️</span>
-    <span>You've already submitted an RSVP. <strong>Update it below and resubmit.</strong></span>
+    <span>You're already on the list! <strong>Update your details below and resubmit anytime.</strong></span>
   </div>` : ""}
   <!-- Verified name (read-only) -->
   <div class="rsvp-name-row" style="margin-bottom:22px">
@@ -389,6 +392,15 @@ function renderPlusOne(r) {
           placeholder="Gluten-free, nut allergy, etc."
           value="${esc(r.plusOneAllergies)}" />
       </div>` : ""}
+  </div>`;
+}
+
+function renderRsvpClosed() {
+  return `
+  <div class="success-banner">
+    <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
+    <p style="font-size:1.1rem;font-weight:500;margin-bottom:8px">RSVPs are now closed</p>
+    <p style="color:var(--muted)">The deadline was 10 August 2026. Please contact us directly if you need to make changes.</p>
   </div>`;
 }
 
@@ -602,7 +614,10 @@ async function handleRsvp() {
     });
 
     if (!data.ok && !data.alreadyRsvpd) {
-      set({ rsvpLoading: false, rsvpError: data.error || "Something went wrong." });
+      const msg = data.error === "rsvp_closed"
+        ? "RSVPs are now closed. Changes were accepted until 10 August 2026."
+        : data.error || "Something went wrong.";
+      set({ rsvpLoading: false, rsvpError: msg });
       return;
     }
     set({ rsvpLoading: false, rsvpSubmitted: true, rsvpUpdated: !!data.updated, rsvpError: "" });
