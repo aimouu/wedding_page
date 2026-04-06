@@ -33,4 +33,12 @@ const FAQ = [
     q: "What's the dress code?",
     a: "Disco glam! Sequins, glitter, and colour encouraged. Think Studio 54.",
   },
+    {
+    q: "Want to make a speech?",
+    a: "xxxxxxxxxxxxxxxx",
+  },
+    {
+    q: "About gifts?",
+    a: "xxxxxxx",
+  },
 ];
