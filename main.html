@@ -115,7 +115,11 @@ function setRsvp(patch) { S = { ...S, rsvp: { ...S.rsvp, ...patch } }; render();
 // RENDER — full page rebuild on state change
 // ═══════════════════════════════════════════════════════════════
 function render() {
-  const scrollY = window.scrollY;
+  const scrollY   = window.scrollY;
+  const focusedId = document.activeElement?.id || null;
+  const selStart  = document.activeElement?.selectionStart ?? null;
+  const selEnd    = document.activeElement?.selectionEnd   ?? null;
+
   qi("root").innerHTML = `
     <div class="scroll-body">
       ${renderHero()}
@@ -129,6 +133,14 @@ function render() {
     </div>`;
   bind();
   updateNavHighlight();
+
+  if (focusedId) {
+    const el = qi(focusedId);
+    if (el) {
+      el.focus({ preventScroll: true });
+      if (selStart !== null) el.setSelectionRange(selStart, selEnd);
+    }
+  }
   window.scrollTo({ top: scrollY, behavior: "instant" });
 }
 
