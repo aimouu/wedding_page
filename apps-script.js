@@ -51,6 +51,7 @@ function doGet(e) {
       try { body.plusOne = JSON.parse(body.plusOne); } catch (_) {}
     }
 
+    if (action === "ping")   return respond({ ok: true });
     if (action === "verify") return respond(handleVerify(body));
     if (action === "rsvp")   return respond(handleRsvp(body));
     if (action === "song")   return respond(handleSong(body));
@@ -86,19 +87,46 @@ function handleVerify(body) {
     if (rowFirst === firstName.toLowerCase() &&
         rowLast  === lastName.toLowerCase()) {
 
-      // Check if already RSVP'd
-      const alreadyRsvpd = checkDuplicate(firstName, lastName);
+      // Fetch existing RSVP if any
+      const existing = getExistingRsvp(firstName, lastName);
 
       return {
         ok:           true,
         found:        true,
         plusOne:      plusOne,
-        alreadyRsvpd: alreadyRsvpd,
+        alreadyRsvpd: existing !== null,
+        existingRsvp: existing,
       };
     }
   }
 
   return { ok: true, found: false };
+}
+
+// ── Fetch existing RSVP row ───────────────────────────────────────
+function getExistingRsvp(firstName, lastName) {
+  const sheet = getSheet(SHEET_RSVPS);
+  if (sheet.getLastRow() <= 1) return null;
+
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const f = String(data[i][1]).trim().toLowerCase();
+    const l = String(data[i][2]).trim().toLowerCase();
+    if (f === firstName.toLowerCase() && l === lastName.toLowerCase()) {
+      return {
+        attending:        data[i][3] === "Yes",
+        food:             data[i][4] || "",
+        allergies:        data[i][5] || "",
+        notes:            data[i][6] || "",
+        plusOneFirst:     data[i][7] || "",
+        plusOneLast:      data[i][8] || "",
+        plusOneAttending: data[i][9] === "" ? null : data[i][9] === "Yes",
+        plusOneFood:      data[i][10] || "",
+        plusOneAllergies: data[i][11] || "",
+      };
+    }
+  }
+  return null;
 }
 
 // ── Submit RSVP ───────────────────────────────────────────────────
@@ -116,11 +144,6 @@ function handleRsvp(body) {
     return { ok: false, error: "Guest not found" };
   }
 
-  // Duplicate check
-  if (checkDuplicate(firstName, lastName)) {
-    return { ok: false, error: "Already submitted", alreadyRsvpd: true };
-  }
-
   const sheet = getSheet(SHEET_RSVPS);
 
   // Write headers if sheet is empty
@@ -134,8 +157,7 @@ function handleRsvp(body) {
   }
 
   const plusOne = body.plusOne || {};
-
-  sheet.appendRow([
+  const newRow  = [
     new Date(),
     toTitleCase(firstName),
     toTitleCase(lastName),
@@ -148,9 +170,21 @@ function handleRsvp(body) {
     plusOne.attending  !== undefined ? (plusOne.attending ? "Yes" : "No") : "",
     sanitize(plusOne.food        || ""),
     sanitize(plusOne.allergies   || ""),
-  ]);
+  ];
 
-  return { ok: true };
+  // Overwrite existing row if found, otherwise append
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const f = String(data[i][1]).trim().toLowerCase();
+    const l = String(data[i][2]).trim().toLowerCase();
+    if (f === firstName.toLowerCase() && l === lastName.toLowerCase()) {
+      sheet.getRange(i + 1, 1, 1, newRow.length).setValues([newRow]);
+      return { ok: true, updated: true };
+    }
+  }
+
+  sheet.appendRow(newRow);
+  return { ok: true, updated: false };
 }
 
 // ── Submit Song Request ───────────────────────────────────────────
@@ -187,20 +221,6 @@ function handleSong(body) {
 
 // ── Helpers ───────────────────────────────────────────────────────
 
-function checkDuplicate(firstName, lastName) {
-  const sheet = getSheet(SHEET_RSVPS);
-  if (sheet.getLastRow() <= 1) return false;
-
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    const f = String(data[i][1]).trim().toLowerCase();
-    const l = String(data[i][2]).trim().toLowerCase();
-    if (f === firstName.toLowerCase() && l === lastName.toLowerCase()) {
-      return true;
-    }
-  }
-  return false;
-}
 
 function getSheet(name) {
   const ss = SPREADSHEET_ID

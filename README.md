@@ -47,7 +47,8 @@ main.html           Apps Script (Google)       Google Sheets
 | John          | Doe          | FALSE       |
 
 - `PlusOne`: type exactly `TRUE` or `FALSE`
-- Matching is **case-insensitive** — "aino" matches "Aino"
+- Matching is **case-insensitive** — "anna" matches "Anna", "ANNA" also matches
+- Names are saved to the sheet in **Title Case** automatically (e.g. "anna smith" → "Anna Smith")
 - `RSVPs` and `Songs` tabs: leave empty, headers auto-created on first submission
 
 ---
@@ -77,6 +78,8 @@ main.html           Apps Script (Google)       Google Sheets
 
 > ⚠️ Every time you edit `apps-script.js`, create a **New deployment**.
 > Using "Manage deployments → Edit" does NOT update the live version.
+
+**About response speed:** Apps Script can take 2–5 seconds on the first request after being idle. The page automatically sends a silent warm-up ping when it loads, so by the time a guest clicks "Find my invite" the script is already awake.
 
 ---
 
@@ -144,13 +147,21 @@ Edit the `Guests` tab in Google Sheets directly. Changes take effect immediately
 
 ---
 
+## Updating an RSVP
+
+Guests can re-submit their RSVP at any time. When a verified guest has already submitted:
+- The form is pre-filled with their previous answers
+- A notice is shown: *"You've already submitted an RSVP. You can update it below and resubmit."*
+- On resubmit, the existing row in the `RSVPs` tab is **overwritten** (not duplicated) and the timestamp is updated
+
+---
+
 ## Security
 
 | Threat | Protection |
 |---|---|
 | Guest list exposed | Never sent to browser — only in Google Sheets |
 | Fake RSVPs | Secret token required on every request |
-| Duplicate RSVPs | Server-side duplicate check before writing |
 | Malicious input | Sanitized in both `shared.js` and `apps-script.js` |
 | Guest data visible | Private Google Sheet — only you can open it |
 | Surprise bills | Impossible — both services are free with hard limits |
@@ -165,7 +176,9 @@ Edit the `Guests` tab in Google Sheets directly. Changes take effect immediately
 | Problem | Fix |
 |---|---|
 | "Could not connect" error | Check `WEBHOOK_URL` is correct; deployment is set to "Anyone" |
-| Name not found (correct spelling) | Check for trailing spaces in the Guests sheet cells |
-| RSVP not appearing in sheet | Confirm tab is named exactly `RSVPs` (capital R, V, P) |
-| Changes to apps-script.js not working | Must create a **New deployment**, not edit existing |
+| "Unauthorized" error | `SECRET_TOKEN` in `apps-script.js` must exactly match `config.js` |
+| Name not found (correct spelling) | Check for trailing spaces in the Guests sheet cells; confirm names are in the `Guests` tab, not `Songs` or `RSVPs` |
+| RSVP not appearing in sheet | Confirm tab is named exactly `RSVPs` (capital R, V, P, lowercase s) |
+| Changes to `apps-script.js` not working | Must create a **New deployment**, not edit existing — then update `WEBHOOK_URL` in `config.js` |
+| Slow first response | Expected — Apps Script has a cold-start delay. The page auto-pings on load to minimise this. |
 | DEV_MODE badge still showing | Set `DEV_MODE = false` in `config.js` |
