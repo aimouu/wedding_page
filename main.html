@@ -115,6 +115,7 @@ function setRsvp(patch) { S = { ...S, rsvp: { ...S.rsvp, ...patch } }; render();
 // RENDER — full page rebuild on state change
 // ═══════════════════════════════════════════════════════════════
 function render() {
+  const scrollY = window.scrollY;
   qi("root").innerHTML = `
     <div class="scroll-body">
       ${renderHero()}
@@ -128,6 +129,7 @@ function render() {
     </div>`;
   bind();
   updateNavHighlight();
+  window.scrollTo({ top: scrollY, behavior: "instant" });
 }
 
 function renderDivider() {
