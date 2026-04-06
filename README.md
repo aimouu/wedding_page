@@ -43,9 +43,8 @@ main.html           Apps Script (Google)       Google Sheets
 
 | A (FirstName) | B (LastName) | C (PlusOne) |
 |---------------|--------------|-------------|
-| Aino          | Mäkinen      | TRUE        |
-| Mikael        | Virtanen     | TRUE        |
-| Sofia         | Laine        | FALSE       |
+| Anna          | Smith        | TRUE        |
+| John          | Doe          | FALSE       |
 
 - `PlusOne`: type exactly `TRUE` or `FALSE`
 - Matching is **case-insensitive** — "aino" matches "Aino"
