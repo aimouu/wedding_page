@@ -137,14 +137,14 @@ function handleRsvp(body) {
 
   sheet.appendRow([
     new Date(),
-    firstName,
-    lastName,
+    toTitleCase(firstName),
+    toTitleCase(lastName),
     body.attending     ? "Yes" : "No",
     sanitize(body.food        || ""),
     sanitize(body.allergies   || ""),
     sanitize(body.notes       || ""),
-    sanitize(plusOne.firstName   || ""),
-    sanitize(plusOne.lastName    || ""),
+    toTitleCase(sanitize(plusOne.firstName   || "")),
+    toTitleCase(sanitize(plusOne.lastName    || "")),
     plusOne.attending  !== undefined ? (plusOne.attending ? "Yes" : "No") : "",
     sanitize(plusOne.food        || ""),
     sanitize(plusOne.allergies   || ""),
@@ -180,7 +180,7 @@ function handleSong(body) {
     sheet.appendRow(["Timestamp", "FirstName", "LastName", "Song", "Artist"]);
   }
 
-  sheet.appendRow([new Date(), firstName, lastName, song, artist]);
+  sheet.appendRow([new Date(), toTitleCase(firstName), toTitleCase(lastName), song, artist]);
 
   return { ok: true };
 }
@@ -216,6 +216,10 @@ function sanitize(input) {
     .replace(/on\w+\s*=/gi, "")
     .trim()
     .slice(0, 500);
+}
+
+function toTitleCase(str) {
+  return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function respond(data, headers) {
